@@ -27,6 +27,13 @@ def obtener_curso_visible(curso_id):
     return curso
 
 
+def cursos_visibles_para_usuario():
+    """Devuelve los cursos cuyos materiales y evaluaciones puede consultar el usuario."""
+    if current_user.es_admin() or current_user.es_profesor():
+        return Curso.query.order_by(Curso.nombre).all()
+    return [inscripcion.curso for inscripcion in current_user.inscripciones]
+
+
 def registrar_rutas(app):
     @app.route("/")
     def index():
@@ -73,15 +80,47 @@ def registrar_rutas(app):
     @app.route("/cursos")
     @login_required
     def cursos():
-        if current_user.es_admin() or current_user.es_profesor():
-            lista_cursos = Curso.query.order_by(Curso.nombre).all()
-        else:
-            lista_cursos = [inscripcion.curso for inscripcion in current_user.inscripciones]
+        lista_cursos = cursos_visibles_para_usuario()
         disponibles = []
         if current_user.es_estudiante():
             ids = [inscripcion.id_curso for inscripcion in current_user.inscripciones]
             disponibles = Curso.query.filter(~Curso.id.in_(ids)).order_by(Curso.nombre).all()
         return render_template("cursos/listado.html", cursos=lista_cursos, cursos_disponibles=disponibles)
+
+    @app.route("/materiales")
+    @login_required
+    def materiales():
+        cursos_usuario = cursos_visibles_para_usuario()
+        materiales_por_curso = [
+            (curso, Contenido.query.filter_by(id_curso=curso.id).order_by(Contenido.fecha_publicacion.desc()).all())
+            for curso in cursos_usuario
+        ]
+        return render_template("contenidos/listado.html", materiales_por_curso=materiales_por_curso)
+
+    @app.route("/evaluaciones")
+    @login_required
+    def evaluaciones():
+        cursos_usuario = cursos_visibles_para_usuario()
+        ids_cursos = [curso.id for curso in cursos_usuario]
+        lista_evaluaciones = []
+        if ids_cursos:
+            lista_evaluaciones = Evaluacion.query.filter(
+                Evaluacion.id_curso.in_(ids_cursos)
+            ).order_by(Evaluacion.fecha.desc()).all()
+        entregas = {}
+        if current_user.es_estudiante() and lista_evaluaciones:
+            ids_evaluaciones = [evaluacion.id for evaluacion in lista_evaluaciones]
+            entregas = {
+                entrega.id_evaluacion: entrega
+                for entrega in EntregaEvaluacion.query.filter_by(id_estudiante=current_user.id).filter(
+                    EntregaEvaluacion.id_evaluacion.in_(ids_evaluaciones)
+                ).all()
+            }
+        return render_template(
+            "evaluaciones/listado.html",
+            evaluaciones=lista_evaluaciones,
+            entregas=entregas,
+        )
 
     @app.route("/cursos/nuevo", methods=["GET", "POST"])
     @login_required
