@@ -1,3 +1,7 @@
 Flask
-mysql-connector-python
-Werkzeug
+Flask-SQLAlchemy
+Flask-Login
+Flask-WTF
+PyMySQL
+python-dotenv
+email-validator
