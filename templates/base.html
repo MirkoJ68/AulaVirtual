@@ -12,8 +12,8 @@
   <body>
     <nav class="barra">
       <a class="marca" href="{{ url_for('index') }}">Aula Virtual LBDG</a>
-      <button id="theme-toggle" type="button">🌙</button>
-      <div class="nav-enlaces">
+        
+    <div class="nav-enlaces">
         {% if current_user.is_authenticated %}<a href="{{ url_for('cursos') }}"
           >Mis cursos</a
         ><span class="usuario">{{ current_user.nombre }}</span
@@ -24,6 +24,9 @@
           >Crear cuenta</a
         >{% endif %}
       </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Cambiar modo">
+    <span class="theme-icon sun">☀</span>
+    <span class="theme-icon moon">☾</span></button>  
     </nav>
     <main class="contenedor">
       {% with mensajes = get_flashed_messages(with_categories=true) %}{% for
